@@ -1,0 +1,6 @@
+* text=auto
+# Bash breaks on Windows line endings.
+*.sh text eol=lf
+launcher/local.env text eol=lf
+*.jpg binary
+*.png binary
