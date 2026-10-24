@@ -24,6 +24,10 @@ public class HomeKeyService extends AccessibilityService {
     // Settings and the Appstore open by passing through the Amazon home; the log shows the app asked.
     private static final long APP_HOME_GRACE_MS = 2500;
     private static final long FALLBACK_MS = 1000;
+    // At boot the Amazon home starts before the clock and network are ready; covered right away it
+    // never retries, stays "unavailable", and so does the Appstore (a tab of it). So the first time,
+    // leave it on screen until the network is validated plus a few seconds to load, 90 s at most.
+    private static final long BOOT_WINDOW_MS = 5 * 60_000, AMAZON_LOAD_MS = 6000, BOOT_WAIT_MAX_MS = 90_000;
 
     private static HomeKeyService running;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -32,6 +36,20 @@ public class HomeKeyService extends AccessibilityService {
     private volatile long appAskedHomeAt = -APP_HOME_GRACE_MS;
     private volatile long handledAt = -APP_HOME_GRACE_MS; // the log already replaced the Amazon home
     private long otherLauncherScreenAt = -APP_HOME_GRACE_MS;
+    private boolean amazonHomeLoaded = SystemClock.elapsedRealtime() > BOOT_WINDOW_MS;
+    private long bootWaitSince = -1;
+    private final Runnable replaceWhenLoaded = new Runnable() {
+        @Override public void run() {
+            if (bootWaitSince < 0) bootWaitSince = SystemClock.elapsedRealtime();
+            boolean ready = networkReady();
+            if (ready || SystemClock.elapsedRealtime() - bootWaitSince >= BOOT_WAIT_MAX_MS) {
+                amazonHomeLoaded = true;
+                handler.postDelayed(replaceAmazonHome, ready ? AMAZON_LOAD_MS : 0);
+            } else {
+                handler.postDelayed(this, 1000);
+            }
+        }
+    };
     private final Runnable replaceAmazonHome = () -> {
         Intent i = new Intent(this, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -48,6 +66,8 @@ public class HomeKeyService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         running = this;
+        // The service starts with the TV, so this is where a clock stuck in the past gets caught.
+        ClockGuard.start(this);
         // The system can connect the same service twice; one log reader is enough.
         if (watcher != null && watcher.isAlive()) return;
         watcher = new Thread(this::watchSystemLog, "system-log");
@@ -104,6 +124,10 @@ public class HomeKeyService extends AccessibilityService {
             if (line.endsWith("from uid 0") || line.endsWith("from uid 1000")) {
                 handledAt = SystemClock.uptimeMillis();
                 handler.post(() -> {
+                    if (!amazonHomeLoaded) {
+                        if (!handler.hasCallbacks(replaceWhenLoaded)) handler.post(replaceWhenLoaded);
+                        return;
+                    }
                     handler.removeCallbacks(replaceAmazonHome);
                     replaceAmazonHome.run();
                 });
@@ -111,6 +135,13 @@ public class HomeKeyService extends AccessibilityService {
                 appAskedHomeAt = SystemClock.uptimeMillis();
             }
         }
+    }
+
+    private boolean networkReady() {
+        android.net.ConnectivityManager cm = getSystemService(android.net.ConnectivityManager.class);
+        android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
+        return caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                && ClockGuard.clockRight(this);
     }
 
     private void openPackage(String pkg) {
@@ -126,7 +157,7 @@ public class HomeKeyService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent e) {
-        if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+        if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || !amazonHomeLoaded) return;
         long now = SystemClock.uptimeMillis();
         if (!AMAZON_HOME.contentEquals(e.getClassName() == null ? "" : e.getClassName())) {
             // Another Amazon launcher screen (settings) is opening over the home: leave it be.

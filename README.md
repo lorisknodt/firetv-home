@@ -19,8 +19,10 @@ une commande et entièrement réversible.
   Fire OS refuse normalement toute appli YouTube qui ne vient pas d'Amazon.
 - **Un panneau Réglages rapide** (bouton Menu de la télécommande) : Wi-Fi, Bluetooth et manettes,
   barre de son, Appstore, mise en veille, tous les réglages.
-- **Nettoyage** : désactive (sans jamais désinstaller) la télémétrie, les pubs et les applis Amazon
-  superflues (shopping, miniTV, GameHub, Photos, Musique, mode Ambient) et, au choix, Alexa.
+- **Nettoyage** : désactive (sans jamais désinstaller) près de 60 paquets Amazon : télémétrie et
+  collecte de données (dont l'envoi de tes mots de passe Wi-Fi à Amazon et la détection de présence
+  dans la pièce), pubs et promos, applis superflues (shopping, Live, Silk, Kids, Photos, Musique,
+  mode Ambient…) et, au choix, les extras d'Alexa (la recherche vocale reste).
 - **DNS anti-pub** : AdGuard DNS chiffré, qui bloque pubs et traqueurs dans toutes les applis.
 - **Animations accélérées** (0,5x) pour une interface plus vive.
 - **Réparation automatique** : une tâche Windows vérifie toutes les 2 heures que tout est en place
@@ -123,7 +125,7 @@ mêmes options `--skip-…` et `--keep` permettent de n'annuler qu'une partie.
 | Applis du dock, applis masquées, appli du bouton YouTube | [`launcher/res/values/config.xml`](launcher/res/values/config.xml) |
 | Fonds d'écran (JPEG 1920×1080) : jour et soir | `launcher/assets/wallpapers/jour` et `soir` |
 | Heures jour / soir / nuit | `day_from`, `day_until`, `night_from`, `night_until` dans `config.xml` |
-| Paquets désactivés | [`debloat/`](debloat/), une liste par thème |
+| Paquets désactivés | [`debloat/`](debloat/) : `telemetrie-pubs`, `applis-amazon`, `alexa` ; garde une liste entière avec `--keep <nom>`, ou mets un paquet en commentaire avec `#` |
 
 Après une modification du launcher : `./setup.sh <ip> --rebuild --skip-debloat --skip-tweaks --skip-dns`.
 
@@ -144,6 +146,13 @@ s'en accommode :
 - **L'Appstore fait partie de l'accueil Amazon** sur Fire OS 8 : il passe donc par l'accueil Amazon.
 - **« Affichage et sons » est interdit aux applis tierces** ; le panneau propose la barre de son et
   tous les réglages à la place.
+- **Le Stick n'a pas de pile pour garder l'heure** : il redémarre au 10 octobre et la redemande à
+  internet. Avec le DNS chiffré, c'est un cercle vicieux : une date fausse fait échouer le DNS, donc
+  la mise à l'heure. Le launcher passe alors le DNS en automatique le temps de récupérer l'heure,
+  puis remet AdGuard (permission `WRITE_SECURE_SETTINGS`, accordée par `setup.sh`).
+- **Au démarrage, l'accueil Amazon reste affiché quelques secondes** : couvert trop tôt, il ne
+  charge jamais son contenu, et l'Appstore (qui en fait partie) resterait « indisponible ». Le
+  launcher attend donc que le réseau soit prêt avant de prendre la main, une seule fois par démarrage.
 - **Quelques services ne s'arrêtent pas** sans root, même désactivés (`telemetry.emitter`, `whad`) :
   le DNS anti-pub bloque au moins leurs envois.
 - **« Forcer l'arrêt » du launcher désactive aussi son service** (règle d'Android) : le bouton Home
@@ -167,6 +176,22 @@ base64 -w0 launcher/debug.keystore | gh secret set KEYSTORE_BASE64
 
 ## Vie privée
 
+### Trois réglages à couper à la main
+
+Certains réglages d'Amazon sont liés à ton compte et ne se changent pas par ADB : il faut passer
+par les menus. Sur le Fire TV, dans **Paramètres → Préférences → Paramètres de confidentialité** :
+
+| Réglage | À mettre sur |
+|---|---|
+| Données d'utilisation de l'appareil | **Désactivé** |
+| Collecter les données d'utilisation des applis | **Désactivé** |
+| Publicités basées sur les centres d'intérêt | **Désactivé** |
+
+Le nom exact peut varier selon la version de Fire OS. Dans **Paramètres → Préférences → Contenu
+en vedette**, tu peux aussi couper la lecture automatique des vidéos et du son.
+
+### Le launcher
+
 Le launcher ne fait que deux appels réseau, pour la météo : [ipapi.co](https://ipapi.co) pour
 trouver ta ville à partir de ton IP (une fois par jour) et [Open-Meteo](https://open-meteo.com)
 pour la température (au plus toutes les 30 minutes, seulement quand l'accueil est affiché).
@@ -185,6 +210,8 @@ absent est simplement ignoré.
 
 - Basé sur [tv-home](https://github.com/mihirgupta0900/tv-home) de Mihir Gupta (MIT), adapté pour
   Fire OS.
+- Listes de nettoyage complétées grâce à celles de [cleanyourtv](https://github.com/Gathin23/cleanyourtv)
+  (MIT), testées sur Fire OS 8.1.8.5.
 - Fonds d'écran : Wikimedia Commons, licences CC, voir
   [`launcher/WALLPAPER-CREDITS.md`](launcher/WALLPAPER-CREDITS.md).
 - Icônes : [Material Icons](https://fonts.google.com/icons) de Google (Apache 2.0).

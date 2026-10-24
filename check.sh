@@ -42,9 +42,7 @@ if [ $DEBLOAT = 1 ]; then
   enabled=$(sh_ pm list packages -e)
   for list in debloat/*.txt; do
     case "$KEEP" in *" $(basename "$list" .txt) "*) continue ;; esac
-    for p in $(grep -vE '^\s*(#|$)' "$list" | tr -d '\r'); do
-      # Packages Fire OS refuses to disable stay enabled for good; don't count them.
-      case "$p" in com.amazon.device.metrics|com.amazon.ftvads.deeplinking) continue ;; esac
+    for p in $(list_packages "$list"); do
       grep -qx "package:$p" <<<"$enabled" && drift+=("$p réactivé")
     done
   done

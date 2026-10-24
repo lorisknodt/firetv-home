@@ -32,7 +32,8 @@ if [ $LAUNCHER = 1 ]; then
   if [ $PREBUILT = 1 ]; then [ -f "$APK" ] || die "APK introuvable : $APK"
   elif [ $REBUILD = 1 ] || [ ! -f "$APK" ]; then say "Compilation du launcher"; launcher/build.sh; fi
   say "Installation du launcher"
-  if ! out=$("$ADB" -s "$D" install -r "$APK" 2>&1); then
+  # adb install over Wi-Fi sometimes fails without a reason; one retry fixes it.
+  if ! out=$("$ADB" -s "$D" install -r "$APK" 2>&1) && ! out=$("$ADB" -s "$D" install -r "$APK" 2>&1); then
     # Signed with another key (e.g. a GitHub release over a local build): Android refuses the
     # update, so reinstall. The launcher only keeps its weather cache, nothing is lost.
     case "$out" in
@@ -45,8 +46,10 @@ if [ $LAUNCHER = 1 ]; then
   fi
   # Location: Android 11 only shows the Wi-Fi name to apps holding it.
   # READ_LOGS: how the launcher sees Home presses and the refused YouTube button (see README).
+  # WRITE_SECURE_SETTINGS: lets it pause the encrypted DNS while the clock is wrong after a restart.
   sh_ pm grant $PKG android.permission.ACCESS_FINE_LOCATION
   sh_ pm grant $PKG android.permission.READ_LOGS
+  sh_ pm grant $PKG android.permission.WRITE_SECURE_SETTINGS
   sh_ cmd package set-home-activity --user 0 $PKG/.MainActivity >/dev/null 2>&1 || true
   cur=$(sh_ settings get secure enabled_accessibility_services)
   case "$cur" in

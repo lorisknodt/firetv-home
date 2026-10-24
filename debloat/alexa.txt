@@ -1,10 +1,19 @@
-# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): Alexa. The remote's microphone button stops working.
+# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): Alexa extras (alarms, calls, multi-room, smart home).
 # Disabled with `pm disable-user`, never uninstalled. Keep it with: ./setup.sh <ip> --keep alexa
+# Voice search on the remote's microphone stays: com.amazon.vizzini is left alone, since Fire OS
+# re-enables it at every boot (and it then crashes if it was disabled).
 
-com.amazon.vizzini
 com.amazon.tv.alexaalerts
 com.amazon.tv.alexanotifications
 com.amazon.alexa.externalmediaplayer.fireos
 com.amazon.alexamediaplayer.runtime.ftv
 com.amazon.firetv.androidskillconnectioncapability
-com.amazon.whad
+com.amazon.aiondec                         # skill connections
+com.amazon.aca                             # hints and cues
+com.amazon.spotify.mediabrowserservice     # Spotify for Alexa (the Spotify app is separate)
+com.amazon.audiohome                       # Alexa Home Theater
+com.amazon.whad                            # multi-room music
+com.amazon.whasettings
+com.amazon.rtcsessioncontroller            # calling and Drop In
+com.amazon.smarthomemapviewapp             # smart home dashboard
+com.amazon.tv.mattercohost                 # Matter controller (Matter casting stays)
