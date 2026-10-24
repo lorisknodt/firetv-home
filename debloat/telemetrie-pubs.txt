@@ -1,0 +1,16 @@
+# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): telemetry and ads.
+# Disabled with `pm disable-user`, never uninstalled. Applied by setup.sh, undone by uninstall.sh.
+
+# Telemetry and metrics
+com.amazon.device.telemetry.emitter
+com.amazon.client.metrics.api
+com.amazon.device.metrics
+com.amazon.perfcollection
+com.amazon.wirelessmetrics.service
+
+# Ads and recommendations
+com.amazon.tv.acr
+com.amazon.ftvads.deeplinking
+com.amazon.hybridadidservice
+com.amazon.sneakpeek
+com.amazon.media.recommendations

@@ -1,0 +1,14 @@
+# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): Amazon extras not used here.
+# Disabled with `pm disable-user`, never uninstalled.
+# Applied by setup.sh, undone by uninstall.sh.
+
+# Shopping, miniTV, games, photos, music
+com.amazon.shoptv.client
+com.amazon.shoptv.firetv.client
+com.amazon.minitv.android.app
+com.amazon.gamehub
+com.amazon.bueller.photos
+com.amazon.bueller.music
+
+# Ambient mode ("Écran dynamique"); the basic screensaver stays
+com.amazon.tv.ftvambient

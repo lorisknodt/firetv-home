@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher settings. Edit, then run ./build.sh && ./install.sh.
+  Package names: adb shell pm list packages
+-->
+<resources>
+    <string name="home_service_description">Ramène le bouton Home de la télécommande sur cet écran d\'accueil au lieu de celui d\'Amazon.</string>
+
+    <!-- Dock apps, left to right. Apps that aren't installed are skipped. -->
+    <string-array name="dock_apps">
+        <item>com.stremio.one</item>
+        <item>com.netflix.ninja</item>
+        <item>org.smarttube.stable</item>
+        <item>com.nst.iptvsmarterstvbox</item>
+        <item>tv.twitch.android.viewer</item>
+    </string-array>
+
+    <!-- Never shown as tiles: Amazon extras and duplicates. -->
+    <string-array name="hidden_apps">
+        <item>com.amazon.firetv.youtube</item>
+        <item>com.amazon.bueller.music</item>
+        <item>com.amazon.shoptv.firetv.client</item>
+        <item>com.amazon.audiohome</item>
+        <item>com.amazon.firetv.troubleshooting</item>
+        <item>com.amazon.smarthomemapviewapp</item>
+        <item>com.amazon.spiderpork</item>
+        <item>com.amazon.whasettings</item>
+    </string-array>
+
+    <!-- Opened when the remote's YouTube button is pressed (Fire OS refuses non-Amazon YouTube apps). -->
+    <string name="youtube_button_package" translatable="false">org.smarttube.stable</string>
+
+    <!-- Tiles per row in the grid. -->
+    <integer name="columns">5</integer>
+</resources>

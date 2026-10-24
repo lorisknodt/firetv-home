@@ -1,0 +1,10 @@
+# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): Alexa. The remote's microphone button stops working.
+# Disabled with `pm disable-user`, never uninstalled. Keep it with: ./setup.sh <ip> --keep alexa
+
+com.amazon.vizzini
+com.amazon.tv.alexaalerts
+com.amazon.tv.alexanotifications
+com.amazon.alexa.externalmediaplayer.fireos
+com.amazon.alexamediaplayer.runtime.ftv
+com.amazon.firetv.androidskillconnectioncapability
+com.amazon.whad

@@ -1,0 +1,4 @@
+launcher/build/
+# Your signing key and local paths stay on your machine.
+launcher/debug.keystore
+launcher/local.env
