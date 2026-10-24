@@ -32,7 +32,17 @@ if [ $LAUNCHER = 1 ]; then
   if [ $PREBUILT = 1 ]; then [ -f "$APK" ] || die "APK introuvable : $APK"
   elif [ $REBUILD = 1 ] || [ ! -f "$APK" ]; then say "Compilation du launcher"; launcher/build.sh; fi
   say "Installation du launcher"
-  "$ADB" -s "$D" install -r "$APK" >/dev/null
+  if ! out=$("$ADB" -s "$D" install -r "$APK" 2>&1); then
+    # Signed with another key (e.g. a GitHub release over a local build): Android refuses the
+    # update, so reinstall. The launcher only keeps its weather cache, nothing is lost.
+    case "$out" in
+      *UPDATE_INCOMPATIBLE*|*SIGNATURES*)
+        warn "Launcher signé avec une autre clé : réinstallation."
+        sh_ pm uninstall $PKG >/dev/null
+        "$ADB" -s "$D" install "$APK" >/dev/null ;;
+      *) die "Installation impossible : $out" ;;
+    esac
+  fi
   # Location: Android 11 only shows the Wi-Fi name to apps holding it.
   # READ_LOGS: how the launcher sees Home presses and the refused YouTube button (see README).
   sh_ pm grant $PKG android.permission.ACCESS_FINE_LOCATION
