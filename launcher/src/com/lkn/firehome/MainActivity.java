@@ -84,8 +84,8 @@ public class MainActivity extends Activity {
     private LinearLayout grid;
     private View glow;
     private ImageView wallBack, wallFront;
-    private View gridShade;
-    private String[] wallpapers = new String[0];
+    private View gridShade, nightShade;
+    private String shownPeriod;
     private int wallIndex = -1;
     private long wallChangedAt;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -100,7 +100,7 @@ public class MainActivity extends Activity {
     private PopupWindow panelPopup;
 
     private final BroadcastReceiver tick = new BroadcastReceiver() {
-        @Override public void onReceive(Context c, Intent i) { updateClock(); updateWifi(); updateStats(); }
+        @Override public void onReceive(Context c, Intent i) { updateClock(); updateWifi(); updateStats(); followTimeOfDay(); }
     };
     private final BroadcastReceiver packages = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { buildApps(); }
@@ -149,6 +149,7 @@ public class MainActivity extends Activity {
         // New photo on return if the current one has been up for the full interval.
         if (wallIndex < 0 || SystemClock.elapsedRealtime() - wallChangedAt >= WALLPAPER_INTERVAL_MS) nextWallpaper();
         else scheduleWallpaper(WALLPAPER_INTERVAL_MS - (SystemClock.elapsedRealtime() - wallChangedAt));
+        followTimeOfDay();
     }
 
     @Override
@@ -202,9 +203,10 @@ public class MainActivity extends Activity {
         gridShade.setBackgroundColor(0xB3000000);
         gridShade.setAlpha(0f);
         root.addView(gridShade, new FrameLayout.LayoutParams(-1, -1));
-        try {
-            wallpapers = getAssets().list("wallpapers");
-        } catch (java.io.IOException ignored) { }
+        nightShade = new View(this);
+        nightShade.setBackgroundColor(0x73000000);
+        nightShade.setAlpha(0f);
+        root.addView(nightShade, new FrameLayout.LayoutParams(-1, -1));
 
         glow = new View(this);
         root.addView(glow, new FrameLayout.LayoutParams(-1, -1));
@@ -720,26 +722,26 @@ public class MainActivity extends Activity {
         return v;
     }
 
-    /** Decode the next photo off the main thread, then crossfade it in over the current one. */
+    /** Decode the next photo of the current period off the main thread, then crossfade it in. */
     private void nextWallpaper() {
         handler.removeCallbacks(rotateWallpaper);
-        if (wallpapers.length == 0) return;
-        if (wallIndex < 0) wallIndex = getPreferences(MODE_PRIVATE).getInt("wallpaper", -1);
-        wallIndex = (wallIndex + 1) % wallpapers.length;
-        getPreferences(MODE_PRIVATE).edit().putInt("wallpaper", wallIndex).apply();
+        shownPeriod = Wallpapers.period(this);
+        String name = Wallpapers.next(this, shownPeriod);
+        if (name == null) return;
+        wallIndex = 0;
         wallChangedAt = SystemClock.elapsedRealtime();
-        String name = "wallpapers/" + wallpapers[wallIndex];
         new Thread(() -> {
-            Bitmap bm = null;
-            try (java.io.InputStream in = getAssets().open(name)) {
-                BitmapFactory.Options o = new BitmapFactory.Options();
-                o.inPreferredConfig = Bitmap.Config.RGB_565;
-                bm = BitmapFactory.decodeStream(in, null, o);
-            } catch (java.io.IOException ignored) { }
-            Bitmap result = bm;
+            Bitmap result = Wallpapers.decode(this, name);
             runOnUiThread(() -> showWallpaper(result));
         }).start();
         scheduleWallpaper(WALLPAPER_INTERVAL_MS);
+    }
+
+    /** Called every minute: switch to the evening photos at the set hour, dim late at night. */
+    private void followTimeOfDay() {
+        if (shownPeriod != null && !shownPeriod.equals(Wallpapers.period(this))) nextWallpaper();
+        float night = Wallpapers.isNight(this) ? 1f : 0f;
+        if (nightShade.getAlpha() != night) nightShade.animate().alpha(night).setDuration(2000).start();
     }
 
     private void showWallpaper(Bitmap bm) {

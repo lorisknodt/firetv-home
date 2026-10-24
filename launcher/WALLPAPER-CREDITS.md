@@ -1,6 +1,7 @@
 # Wallpaper credits
 
 Photos from Wikimedia Commons Featured Pictures, used under their free licences.
+They sit in `assets/wallpapers/jour` (day: 01, 05, 07, 11, 12) and `assets/wallpapers/soir` (evening: the rest).
 
 - `01.jpg` 1 lake louise pano 2019: Chensiyuan, CC BY-SA 4.0. https://commons.wikimedia.org/wiki/File%3A1_lake_louise_pano_2019.jpg
 - `02.jpg` Cirrus front over Austnesfjorden, Austvågøya, Lofoten, Norway, 2015 April: Ximonic (Simo Räsänen), CC BY-SA 3.0. https://commons.wikimedia.org/wiki/File%3ACirrus_front_over_Austnesfjorden%2C_Austv%C3%A5g%C3%B8ya%2C_Lofoten%2C_Norway%2C_2015_April.jpg

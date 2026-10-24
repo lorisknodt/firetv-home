@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Launcher settings. Edit, then run ./build.sh && ./install.sh.
+  Launcher settings. Edit, then reinstall with setup.sh and its rebuild option (see README).
   Package names: adb shell pm list packages
 -->
 <resources>
@@ -29,6 +29,13 @@
 
     <!-- Opened when the remote's YouTube button is pressed (Fire OS refuses non-Amazon YouTube apps). -->
     <string name="youtube_button_package" translatable="false">org.smarttube.stable</string>
+
+    <!-- Wallpapers: assets/wallpapers/jour from day_from to day_until (hours, 0-23), then
+         assets/wallpapers/soir. From night_from to night_until the photo is also dimmed. -->
+    <integer name="day_from">7</integer>
+    <integer name="day_until">18</integer>
+    <integer name="night_from">22</integer>
+    <integer name="night_until">6</integer>
 
     <!-- Tiles per row in the grid. -->
     <integer name="columns">5</integer>

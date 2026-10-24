@@ -3,13 +3,14 @@
 # Every step is reversible with ./uninstall.sh. Safe to run again, e.g. after a Fire OS update.
 #
 #   ./setup.sh <fire-tv-ip> [--skip-launcher] [--skip-debloat] [--skip-tweaks] [--skip-dns]
-#                           [--keep <list>] [--dns <hostname>] [--rebuild]
+#                           [--keep <list>] [--dns <hostname>] [--rebuild] [--apk <file>]
 #   --keep alexa   leaves the packages of debloat/alexa.txt alone (repeatable, any list name)
+#   --apk <file>   installs that APK (e.g. downloaded from GitHub) instead of building one
 set -euo pipefail
 cd "$(dirname "$0")"
 . scripts/lib.sh
 
-KEEP=" " IP="" LAUNCHER=1 DEBLOAT=1 TWEAKS=1 DNS=1 DNS_HOST=$DEFAULT_DNS REBUILD=0
+KEEP=" " IP="" LAUNCHER=1 DEBLOAT=1 TWEAKS=1 DNS=1 DNS_HOST=$DEFAULT_DNS REBUILD=0 APK=launcher/build/firehome.apk PREBUILT=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-launcher) LAUNCHER=0 ;;
@@ -19,6 +20,7 @@ while [ $# -gt 0 ]; do
     --skip-dns) DNS=0 ;;
     --dns) DNS_HOST=$2; shift ;;
     --rebuild) REBUILD=1 ;;
+    --apk) APK=$2; PREBUILT=1; shift ;;
     -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
     *) IP=$1 ;;
   esac
@@ -27,8 +29,8 @@ done
 connect
 
 if [ $LAUNCHER = 1 ]; then
-  APK=launcher/build/firehome.apk
-  if [ $REBUILD = 1 ] || [ ! -f "$APK" ]; then say "Compilation du launcher"; launcher/build.sh; fi
+  if [ $PREBUILT = 1 ]; then [ -f "$APK" ] || die "APK introuvable : $APK"
+  elif [ $REBUILD = 1 ] || [ ! -f "$APK" ]; then say "Compilation du launcher"; launcher/build.sh; fi
   say "Installation du launcher"
   "$ADB" -s "$D" install -r "$APK" >/dev/null
   # Location: Android 11 only shows the Wi-Fi name to apps holding it.

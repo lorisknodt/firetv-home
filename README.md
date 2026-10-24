@@ -10,7 +10,8 @@ une commande et entièrement réversible.
 
 - **Un écran d'accueil à la place de celui d'Amazon** : horloge, météo, RAM et mode d'affichage, un
   dock de tes applis préférées avec une lueur de la couleur de l'appli sélectionnée, toutes les
-  autres applis en grille, et 12 photos de nature qui changent toutes les 10 minutes. Zéro pub, zéro
+  autres applis en grille, et 12 photos de nature qui changent toutes les 10 minutes : des photos
+  lumineuses le jour, des ambiances de soirée à partir de 18 h, assombries la nuit. Zéro pub, zéro
   recommandation. Environ 70 Mo de RAM, contre 100 à 140 Mo pour l'accueil Amazon.
 - **Le bouton Home ramène sur cet accueil**, en environ 20 ms, y compris au démarrage et depuis
   l'Appstore.
@@ -22,6 +23,8 @@ une commande et entièrement réversible.
   superflues (shopping, miniTV, GameHub, Photos, Musique, mode Ambient) et, au choix, Alexa.
 - **DNS anti-pub** : AdGuard DNS chiffré, qui bloque pubs et traqueurs dans toutes les applis.
 - **Animations accélérées** (0,5x) pour une interface plus vive.
+- **Réparation automatique** : une tâche Windows vérifie toutes les 2 heures que tout est en place
+  et refait la configuration si une mise à jour de Fire OS l'a défaite.
 
 | | |
 |---|---|
@@ -39,8 +42,13 @@ une commande et entièrement réversible.
 
 ### 2. Sur le PC (Windows, macOS ou Linux)
 
-Il faut [Git Bash](https://git-scm.com/) sous Windows, `adb`, et pour compiler le launcher un JDK
-17 et le SDK Android (sans Android Studio). Sous Windows :
+Il faut [Git Bash](https://git-scm.com/) sous Windows et `adb`. Pour le launcher, deux options :
+
+- **Sans rien compiler** : télécharge `firehome.apk` depuis l'onglet **Releases** du dépôt (ou
+  **Actions → Build → firehome-apk**), puis `./setup.sh <ip> --apk firehome.apk`.
+- **En le compilant toi-même** : il faut en plus un JDK 17 et le SDK Android (sans Android Studio).
+
+Sous Windows :
 
 ```bash
 winget install Google.PlatformTools
@@ -80,6 +88,20 @@ Options utiles :
 ./setup.sh 192.168.1.42 --rebuild             # recompiler après avoir modifié le launcher
 ```
 
+### Réparation automatique (Windows)
+
+Une mise à jour de Fire OS peut réactiver des applis Amazon ou désinstaller le launcher.
+[`check.sh`](check.sh) vérifie l'état de la télé et relance `setup.sh` seulement si quelque chose a
+été défait ; si la télé est éteinte, il ne fait rien. Pour le lancer toutes les 2 heures en
+arrière-plan, sans fenêtre (mêmes options que `setup.sh` après `-SetupArgs`) :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-task.ps1 -Ip 192.168.1.42
+```
+
+Ce qu'il a fait est noté dans `logs/check.log`. Pour retirer la tâche :
+`Unregister-ScheduledTask -TaskName "Fire TV - verification" -Confirm:$false`.
+
 ### Tout annuler
 
 ```bash
@@ -94,7 +116,8 @@ mêmes options `--skip-…` et `--keep` permettent de n'annuler qu'une partie.
 | Quoi | Où |
 |---|---|
 | Applis du dock, applis masquées, appli du bouton YouTube | [`launcher/res/values/config.xml`](launcher/res/values/config.xml) |
-| Fonds d'écran (JPEG 1920×1080) | `launcher/assets/wallpapers/` |
+| Fonds d'écran (JPEG 1920×1080) : jour et soir | `launcher/assets/wallpapers/jour` et `soir` |
+| Heures jour / soir / nuit | `day_from`, `day_until`, `night_from`, `night_until` dans `config.xml` |
 | Paquets désactivés | [`debloat/`](debloat/), une liste par thème |
 
 Après une modification du launcher : `./setup.sh <ip> --rebuild --skip-debloat --skip-tweaks --skip-dns`.
@@ -118,8 +141,24 @@ s'en accommode :
   tous les réglages à la place.
 - **Quelques services ne s'arrêtent pas** sans root, même désactivés (`telemetry.emitter`, `whad`) :
   le DNS anti-pub bloque au moins leurs envois.
+- **« Forcer l'arrêt » du launcher désactive aussi son service** (règle d'Android) : le bouton Home
+  repart alors chez Amazon. La réparation automatique le réactive ; sinon relance `setup.sh`.
+- **L'économiseur d'écran ne se remplace pas** : Fire OS lance celui d'Amazon par son propre circuit,
+  sans passer par le mécanisme standard d'Android.
 - **Une appli ne peut pas en décharger une autre de la mémoire**, ni se connecter à l'ADB interne de
   la télé. Fire OS gère donc lui-même la mémoire, ce qu'il fait bien.
+
+## Compilation automatique (GitHub Actions)
+
+À chaque modification du launcher poussée sur GitHub, [le workflow Build](.github/workflows/build.yml)
+compile l'APK et le joint au run ; un tag `v*` (`git tag v1.1 && git push --tags`) crée en plus une
+release avec l'APK. Un APK ne peut mettre à jour une installation que s'il est signé avec la même
+clé : pour que ceux de GitHub s'installent par-dessus le tien, ajoute ta clé en secret
+`KEYSTORE_BASE64` :
+
+```bash
+base64 -w0 launcher/debug.keystore | gh secret set KEYSTORE_BASE64
+```
 
 ## Vie privée
 
