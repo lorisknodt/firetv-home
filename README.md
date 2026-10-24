@@ -1,40 +1,99 @@
-# firetv-home
+# firetv-home · Personal-Config
 
-**Un Fire TV rapide, propre et sans pubs.** Un écran d'accueil minimaliste avec de beaux fonds
-d'écran, le nettoyage des applis Amazon inutiles, un DNS anti-pub, le tout installé depuis un PC en
-une commande et entièrement réversible.
+**La version personnalisable de [firetv-home](https://github.com/lorisknodt/firetv-home).** Tout ce
+que fait la version de base (accueil sans pubs, nettoyage, DNS anti-pub, réparation automatique),
+plus **des fonds d'écran propres à chaque appli** : tes séries, tes animés, tes jeux… avec un
+**sélecteur avec aperçus** pour choisir l'image à afficher.
 
-![Écran d'accueil](docs/screenshots/accueil.jpg)
+C'est une version pour ceux qui aiment personnaliser : il faut aller chercher ses images soi-même
+et compiler le launcher. Si tu veux juste un Fire TV propre et léger, prends plutôt la
+[version de base](https://github.com/lorisknodt/firetv-home) (branche `main`).
 
-## Ce que ça fait
+![Stremio sélectionné, avec ses propres images](docs/screenshots/personal-stremio.jpg)
 
-- **Un écran d'accueil à la place de celui d'Amazon** : horloge, météo et RAM, trois boutons ronds
-  (Wi-Fi, fond d'écran suivant, réglages), un dock de tes applis préférées, toutes les autres
-  applis en grille, et 12 photos de nature qui changent toutes les 10 minutes : des photos
-  lumineuses le jour, des ambiances de soirée à partir de 18 h, assombries la nuit. Zéro pub, zéro
-  recommandation. Environ 70 Mo de RAM, contre 100 à 140 Mo pour l'accueil Amazon.
-- **Le bouton Home ramène sur cet accueil**, en environ 20 ms, y compris au démarrage et depuis
-  l'Appstore.
-- **Le bouton YouTube de la télécommande ouvre SmartTube** (ou l'appli de ton choix), alors que
-  Fire OS refuse normalement toute appli YouTube qui ne vient pas d'Amazon.
-- **Un panneau Réglages rapide** (bouton Menu de la télécommande) : Wi-Fi, Bluetooth et manettes,
-  barre de son, Appstore, mise en veille, tous les réglages.
-- **Nettoyage** : désactive (sans jamais désinstaller) la télémétrie, les pubs et les applis Amazon
-  superflues (shopping, miniTV, GameHub, Photos, Musique, mode Ambient) et, au choix, Alexa.
-- **DNS anti-pub** : AdGuard DNS chiffré, qui bloque pubs et traqueurs dans toutes les applis.
-- **Animations accélérées** (0,5x) pour une interface plus vive.
-- **Réparation automatique** : une tâche Windows vérifie toutes les 2 heures que tout est en place
-  et refait la configuration si une mise à jour de Fire OS l'a défaite.
+## Ce que cette version ajoute
+
+- **Des images par appli** : quand tu t'arrêtes sur une appli dans le dock ou la grille, l'accueil
+  affiche ses images à elle (un dossier par appli). Les applis sans dossier gardent les photos de
+  nature jour/soir.
+- **Un sélecteur de fond d'écran** (bouton image en haut à droite) : les aperçus des images de
+  l'appli sélectionnée. **« Toutes »** les fait défiler toutes les 10 minutes, ou choisis-en **une**
+  pour la garder (une coche la marque). Le choix est retenu séparément pour chaque appli.
+- **Les grandes images ne pèsent pas** : une image 4K est chargée à la taille de l'écran (environ
+  4 Mo de mémoire au lieu de 16) ; le fichier, lui, reste intact.
 
 | | |
 |---|---|
-| ![Netflix sélectionné](docs/screenshots/accueil-netflix.jpg) | ![Toutes les applis](docs/screenshots/grille.jpg) |
-| ![Panneau Réglages](docs/screenshots/panneau.jpg) | ![Twitch sélectionné](docs/screenshots/accueil-twitch.jpg) |
+| ![Sélecteur avec aperçus](docs/screenshots/personal-selecteur.jpg) | ![Twitch sélectionné, avec ses propres images](docs/screenshots/personal-twitch.jpg) |
 
-> **Envie de plus de personnalisation ?** La branche
-> [`Personal-Config`](https://github.com/lorisknodt/firetv-home/tree/Personal-Config) ajoute des fonds
-> d'écran propres à chaque appli (tes images à toi) et un sélecteur avec aperçus. Cette version-ci
-> reste la plus légère.
+*Les captures utilisent les photos de nature du projet ; avec tes propres images, l'accueil prend
+l'ambiance de chaque appli.*
+
+## Mettre en place tes fonds d'écran
+
+### 1. Récupérer ce dépôt
+
+```bash
+git clone -b Personal-Config https://github.com/lorisknodt/firetv-home
+cd firetv-home
+```
+
+### 2. Trouver le nom technique de tes applis
+
+Chaque appli a un nom de paquet (par exemple `com.netflix.ninja` pour Netflix). Avec le Fire TV
+branché en ADB (voir [Installation](#installation)) :
+
+```bash
+adb shell pm list packages -3
+```
+
+Les plus courants :
+
+| Appli | Dossier à créer |
+|---|---|
+| Netflix | `com.netflix.ninja` |
+| Prime Video | `com.amazon.firebat` |
+| Stremio | `com.stremio.one` |
+| SmartTube | `org.smarttube.stable` |
+| Twitch | `tv.twitch.android.viewer` |
+| IPTV Smarters Pro | `com.nst.iptvsmarterstvbox` |
+
+Pour toute autre appli, cherche son nom dans la liste donnée par la commande ci-dessus.
+
+### 3. Ajouter tes images
+
+Crée un dossier par appli dans `launcher/assets/wallpapers/apps/` et dépose-y tes images :
+
+```
+launcher/assets/wallpapers/apps/
+├── com.netflix.ninja/
+│   ├── stranger-things.jpg
+│   └── the-witcher.jpg
+└── com.stremio.one/
+    └── got.jpg
+```
+
+- **Formats** : JPG, PNG ou WebP. L'AVIF et le HEIC ne sont pas lus par Fire OS 8 (Android 11) :
+  convertis-les d'abord (n'importe quel éditeur d'images, ou un convertisseur en ligne).
+- **Taille** : au moins 1920×1080 pour une image nette ; la 4K fonctionne aussi. En dessous
+  (800×450 par exemple), l'image sera floue en plein écran.
+- **Format d'image** : du 16:9 de préférence, sinon l'image est recadrée au centre.
+- **Droits d'auteur** : les visuels de séries ou d'animés sont souvent protégés. Le dossier
+  `apps/` est ignoré par git pour que tes images restent sur ton PC et ne soient pas publiées par
+  erreur si tu partages ton propre dépôt.
+
+### 4. Installer
+
+Les images sont intégrées au launcher au moment de la compilation : il faut donc **compiler
+soi-même** (JDK 17 et SDK Android, voir [Installation](#installation)). L'APK des releases et de
+GitHub Actions ne contient pas tes images.
+
+```bash
+./setup.sh <ip-du-fire-tv> --rebuild
+```
+
+Pour ajouter ou changer des images plus tard, mets à jour les dossiers et relance la même commande
+(avec `--skip-debloat --skip-tweaks --skip-dns` pour ne réinstaller que le launcher).
 
 ## Installation
 
@@ -47,11 +106,8 @@ une commande et entièrement réversible.
 
 ### 2. Sur le PC (Windows, macOS ou Linux)
 
-Il faut [Git Bash](https://git-scm.com/) sous Windows et `adb`. Pour le launcher, deux options :
-
-- **Sans rien compiler** : télécharge `firehome.apk` depuis l'onglet **Releases** du dépôt (ou
-  **Actions → Build → firehome-apk**), puis `./setup.sh <ip> --apk firehome.apk`.
-- **En le compilant toi-même** : il faut en plus un JDK 17 et le SDK Android (sans Android Studio).
+Il faut [Git Bash](https://git-scm.com/) sous Windows, `adb`, et pour cette version un JDK 17 et le
+SDK Android (sans Android Studio) : tes images sont intégrées au launcher à la compilation.
 
 Sous Windows :
 
@@ -122,6 +178,7 @@ mêmes options `--skip-…` et `--keep` permettent de n'annuler qu'une partie.
 |---|---|
 | Applis du dock, applis masquées, appli du bouton YouTube | [`launcher/res/values/config.xml`](launcher/res/values/config.xml) |
 | Fonds d'écran (JPEG 1920×1080) : jour et soir | `launcher/assets/wallpapers/jour` et `soir` |
+| Fonds d'écran d'une appli | `launcher/assets/wallpapers/apps/<paquet>/` (voir plus haut) |
 | Heures jour / soir / nuit | `day_from`, `day_until`, `night_from`, `night_until` dans `config.xml` |
 | Paquets désactivés | [`debloat/`](debloat/), une liste par thème |
 
