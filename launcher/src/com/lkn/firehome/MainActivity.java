@@ -85,7 +85,15 @@ public class MainActivity extends Activity {
     private ImageView wallBack, wallFront;
     private View gridShade, nightShade;
     private String shownPeriod;
+    // App whose own photos are showing (assets/wallpapers/apps/{package}), or null for the day/evening set.
+    private String wallApp, pendingWallApp;
     private int wallSeq;
+    private boolean quickFade;
+    private final Runnable switchWallApp = () -> {
+        wallApp = pendingWallApp;
+        quickFade = true;
+        nextWallpaper();
+    };
     private int wallIndex = -1;
     private long wallChangedAt;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -95,7 +103,7 @@ public class MainActivity extends Activity {
     private int lastFocusedId = View.NO_ID;
     private boolean firstShow = true;
     private int packageSeq;
-    private PopupWindow panelPopup;
+    private PopupWindow panelPopup, pickerPopup;
 
     private final BroadcastReceiver tick = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { updateClock(); updateStats(); followTimeOfDay(); }
@@ -155,6 +163,7 @@ public class MainActivity extends Activity {
         handler.removeCallbacks(rotateWallpaper);
         unregisterReceiver(tick);
         if (panelPopup != null) panelPopup.dismiss();
+        if (pickerPopup != null) pickerPopup.dismiss();
     }
 
     @Override
@@ -168,6 +177,7 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         // Home pressed while already home: jump back to the first dock app.
         if (panelPopup != null) panelPopup.dismiss();
+        if (pickerPopup != null) pickerPopup.dismiss();
         // onResume runs after this and restores lastFocusedId, so point it at the dock too.
         lastFocusedId = dockCards.isEmpty() ? View.NO_ID : dockCards.get(0).getId();
         if (!dockCards.isEmpty()) dockCards.get(0).requestFocus();
@@ -305,7 +315,7 @@ public class MainActivity extends Activity {
         View wifi = iconButton(R.drawable.ic_wifi);
         wifi.setOnClickListener(v -> launch(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         View photo = iconButton(R.drawable.ic_image);
-        photo.setOnClickListener(v -> nextWallpaper());
+        photo.setOnClickListener(v -> showWallpaperPicker());
         View settings = iconButton(R.drawable.ic_settings);
         settings.setOnClickListener(v -> showPanel());
         for (View p : new View[]{wifi, photo, settings}) {
@@ -488,6 +498,7 @@ public class MainActivity extends Activity {
             label.animate().alpha(has ? 1f : 0f).translationY(has ? dp(4) : 0).setDuration(200).start();
             if (!has) return;
             lastFocusedId = v.getId();
+            focusWallpaper(app.pkg);
             if (inDock) {
                 title.setText(app.label);
                 title.animate().alpha(1f).setDuration(200).start();
@@ -644,6 +655,151 @@ public class MainActivity extends Activity {
         return res + " · " + Math.round(m.getRefreshRate()) + " Hz";
     }
 
+    // ---------------------------------------------------------------- wallpaper picker
+
+    private static final int THUMB_DP = 176;
+
+    /**
+     * Thumbnails of the current set (the last focused app's own photos, else day/evening).
+     * "Toutes" keeps rotating through them; a thumbnail keeps that one photo for the set.
+     */
+    private void showWallpaperPicker() {
+        if (pickerPopup != null) return;
+        String folder = wallApp != null ? wallApp : Wallpapers.period(this);
+        String[] files = Wallpapers.list(this, folder);
+        if (files.length == 0) return;
+        String picked = Wallpapers.picked(this, folder);
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(48), dp(22), dp(48), dp(30));
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0xE6101014, 0xF5060608});
+        bg.setCornerRadii(new float[]{dp(24), dp(24), dp(24), dp(24), 0, 0, 0, 0});
+        panel.setBackground(bg);
+
+        TextView heading = text(12, "sans-serif-medium", 0xCCFFFFFF);
+        heading.setLetterSpacing(0.2f);
+        heading.setText(("Fond d'écran  ·  " + setLabel(folder)).toUpperCase(Locale.FRANCE));
+        panel.addView(heading, llp(-2, -2, dp(6), 0, 0, dp(16)));
+
+        android.widget.HorizontalScrollView strip = new android.widget.HorizontalScrollView(this);
+        strip.setHorizontalScrollBarEnabled(false);
+        strip.setClipChildren(false);
+        strip.setClipToPadding(false);
+        LinearLayout row = new LinearLayout(this);
+        row.setClipChildren(false);
+        row.setClipToPadding(false);
+        row.setPadding(dp(8), dp(10), dp(8), dp(10));
+        strip.addView(row);
+        panel.addView(strip, new LinearLayout.LayoutParams(-1, -2));
+
+        PopupWindow pw = new PopupWindow(panel, -1, -2, true);
+        List<View> tiles = new ArrayList<>();
+        View start = null;
+        tiles.add(pickerTile(folder, null, picked == null, pw));
+        if (picked == null) start = tiles.get(0);
+        for (String f : files) {
+            View t = pickerTile(folder, f, f.equals(picked), pw);
+            tiles.add(t);
+            if (f.equals(picked)) start = t;
+        }
+        for (View t : tiles) {
+            t.setNextFocusUpId(t.getId());
+            t.setNextFocusDownId(t.getId());
+            row.addView(t, llp(dp(THUMB_DP), dp(THUMB_DP) * 9 / 16, 0, 0, dp(18), 0));
+        }
+        tiles.get(0).setNextFocusLeftId(tiles.get(0).getId());
+        View last = tiles.get(tiles.size() - 1);
+        last.setNextFocusRightId(last.getId());
+
+        pw.setOnDismissListener(() -> {
+            pickerPopup = null;
+            if (pills.size() > 1) pills.get(1).requestFocus();
+        });
+        pickerPopup = pw;
+        pw.showAtLocation(getWindow().getDecorView(), Gravity.BOTTOM, 0, 0);
+        (start != null ? start : tiles.get(0)).requestFocus();
+
+        // Thumbnails decode one after the other, small, off the main thread.
+        new Thread(() -> {
+            for (int i = 0; i < files.length; i++) {
+                Bitmap bm = Wallpapers.decode(this, Wallpapers.path(folder, files[i]), dp(THUMB_DP) * 2);
+                ImageView img = (ImageView) ((FrameLayout) tiles.get(i + 1)).getChildAt(0);
+                runOnUiThread(() -> img.setImageBitmap(bm));
+            }
+        }, "thumbnails").start();
+    }
+
+    /** One 16:9 thumbnail; file null is the "Toutes" tile that keeps the set rotating. */
+    private View pickerTile(String folder, String file, boolean current, PopupWindow pw) {
+        FrameLayout card = new FrameLayout(this);
+        card.setId(View.generateViewId());
+        card.setFocusable(true);
+        card.setClipToOutline(true);
+        card.setOutlineProvider(new ViewOutlineProvider() {
+            @Override public void getOutline(View v, Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(10));
+            }
+        });
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF1C1C20);
+        card.setBackground(bg);
+
+        ImageView img = new ImageView(this);
+        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        card.addView(img, new FrameLayout.LayoutParams(-1, -1));
+        if (file == null) {
+            TextView all = text(13, "sans-serif-medium", Color.WHITE);
+            all.setText("⟳\nToutes");
+            all.setGravity(Gravity.CENTER);
+            card.addView(all, new FrameLayout.LayoutParams(-1, -1));
+        }
+        if (current) {
+            TextView check = text(12, "sans-serif-medium", 0xFF111111);
+            check.setText("✓");
+            check.setGravity(Gravity.CENTER);
+            GradientDrawable dot = new GradientDrawable();
+            dot.setShape(GradientDrawable.OVAL);
+            dot.setColor(0xF2FFFFFF);
+            check.setBackground(dot);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(20), dp(20), Gravity.TOP | Gravity.END);
+            lp.setMargins(0, dp(6), dp(6), 0);
+            card.addView(check, lp);
+        }
+        GradientDrawable ring = new GradientDrawable();
+        ring.setCornerRadius(dp(10));
+        ring.setStroke(dp(2), 0xE6FFFFFF);
+        View shine = new View(this);
+        shine.setBackground(ring);
+        shine.setAlpha(0f);
+        card.addView(shine, new FrameLayout.LayoutParams(-1, -1));
+
+        card.setOnFocusChangeListener((v, has) -> {
+            v.animate().scaleX(has ? 1.1f : 1f).scaleY(has ? 1.1f : 1f).translationZ(has ? dp(10) : 0)
+                    .setDuration(200).start();
+            shine.animate().alpha(has ? 1f : 0f).setDuration(150).start();
+        });
+        card.setOnClickListener(v -> {
+            Wallpapers.pick(this, folder, file);
+            pw.dismiss();
+            quickFade = true;
+            nextWallpaper();
+        });
+        return card;
+    }
+
+    private String setLabel(String folder) {
+        if (Wallpapers.DAY.equals(folder)) return "Jour";
+        if (Wallpapers.EVENING.equals(folder)) return "Soir";
+        String pkg = folder.substring(folder.indexOf('/') + 1);
+        try {
+            return String.valueOf(getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0)));
+        } catch (PackageManager.NameNotFoundException e) {
+            return pkg;
+        }
+    }
+
     // ---------------------------------------------------------------- status
 
     private void updateClock() {
@@ -696,13 +852,13 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Decode the next photo of the current period off the main thread, then crossfade it in. A
-     * newer call wins if two decodes finish out of order (the photo button can be pressed quickly).
+     * Decode the next photo (the focused app's own set, else the current period's) off the main
+     * thread, then crossfade it in. A newer call wins if two decodes finish out of order.
      */
     private void nextWallpaper() {
         handler.removeCallbacks(rotateWallpaper);
         shownPeriod = Wallpapers.period(this);
-        String name = Wallpapers.next(this, shownPeriod);
+        String name = Wallpapers.next(this, wallApp != null ? wallApp : shownPeriod);
         if (name == null) return;
         wallIndex = 0;
         wallChangedAt = SystemClock.elapsedRealtime();
@@ -714,9 +870,18 @@ public class MainActivity extends Activity {
         scheduleWallpaper(WALLPAPER_INTERVAL_MS);
     }
 
+    /** Switches to the app's own photos (or back to the default set) once focus rests on it. */
+    private void focusWallpaper(String pkg) {
+        String folder = Wallpapers.appFolder(this, pkg);
+        handler.removeCallbacks(switchWallApp);
+        if (java.util.Objects.equals(folder, wallApp)) return;
+        pendingWallApp = folder;
+        handler.postDelayed(switchWallApp, 350);
+    }
+
     /** Called every minute: switch to the evening photos at the set hour, dim late at night. */
     private void followTimeOfDay() {
-        if (shownPeriod != null && !shownPeriod.equals(Wallpapers.period(this))) nextWallpaper();
+        if (wallApp == null && shownPeriod != null && !shownPeriod.equals(Wallpapers.period(this))) nextWallpaper();
         float night = Wallpapers.isNight(this) ? 1f : 0f;
         if (nightShade.getAlpha() != night) nightShade.animate().alpha(night).setDuration(2000).start();
     }
@@ -732,10 +897,11 @@ public class MainActivity extends Activity {
         root.addView(wallFront, 1, new FrameLayout.LayoutParams(-1, -1));
         wallFront.setImageBitmap(bm);
         wallFront.setAlpha(0f);
-        wallFront.animate().alpha(1f).setDuration(firstWallpaper ? 600 : 2000).withEndAction(() -> {
+        wallFront.animate().alpha(1f).setDuration(firstWallpaper ? 600 : quickFade ? 450 : 2000).withEndAction(() -> {
             wallBack.setImageDrawable(null); // release the previous photo
         }).start();
         firstWallpaper = false;
+        quickFade = false;
     }
 
     private boolean firstWallpaper = true;

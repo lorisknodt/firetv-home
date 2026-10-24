@@ -3,3 +3,5 @@ launcher/build/
 launcher/debug.keystore
 launcher/local.env
 logs/
+# Your own per-app wallpapers stay on your machine: they are often copyrighted (series, anime…).
+launcher/assets/wallpapers/apps/
