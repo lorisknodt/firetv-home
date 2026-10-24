@@ -9,7 +9,7 @@ name: Build
 on:
   push:
     # With a tags filter, branch pushes only trigger when branches are listed too.
-    branches: ["main"]
+    branches: ["main", "Personal-Config"]
     paths: ["launcher/**", ".github/workflows/build.yml"]
     tags: ["v*"]
   workflow_dispatch:
