@@ -53,8 +53,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Apple TV style home screen: clock top-left, pills top-right, the focused dock app's name over an
- * ambient glow, a dock of pinned apps, and every other app in a grid that scrolls up on Down.
+ * Apple TV style home screen: clock top-left, buttons top-right, the focused dock app's name, a
+ * dock of pinned apps, and every other app in a grid that scrolls up on Down.
  * Plain framework views only (no AndroidX), no background work; the only network use is Weather.
  * Fire TV fork: French UI, quick settings panel instead of TV inputs, Home button via HomeKeyService.
  */
@@ -82,25 +82,23 @@ public class MainActivity extends Activity {
     private LinearLayout content, dockRow;
     private FrameLayout hero;
     private LinearLayout grid;
-    private View glow;
     private ImageView wallBack, wallFront;
     private View gridShade, nightShade;
     private String shownPeriod;
+    private int wallSeq;
     private int wallIndex = -1;
     private long wallChangedAt;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable rotateWallpaper = this::nextWallpaper;
     static final long WALLPAPER_INTERVAL_MS = 10 * 60 * 1000;
-    private TextView greeting, clock, ampm, date, stats, title, wifiPill, appsLabel;
-    private int glowColor = 0xFF3A3A3A;
-    private ValueAnimator glowAnim;
+    private TextView greeting, clock, ampm, date, stats, title, appsLabel;
     private int lastFocusedId = View.NO_ID;
     private boolean firstShow = true;
     private int packageSeq;
     private PopupWindow panelPopup;
 
     private final BroadcastReceiver tick = new BroadcastReceiver() {
-        @Override public void onReceive(Context c, Intent i) { updateClock(); updateWifi(); updateStats(); followTimeOfDay(); }
+        @Override public void onReceive(Context c, Intent i) { updateClock(); updateStats(); followTimeOfDay(); }
     };
     private final BroadcastReceiver packages = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { buildApps(); }
@@ -138,7 +136,6 @@ public class MainActivity extends Activity {
         tf.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
         registerReceiver(tick, tf);
         updateClock();
-        updateWifi();
         updateStats();
         View last = lastFocusedId == View.NO_ID ? null : findViewById(lastFocusedId);
         if (last == null && !dockCards.isEmpty()) last = dockCards.get(0);
@@ -208,9 +205,6 @@ public class MainActivity extends Activity {
         nightShade.setAlpha(0f);
         root.addView(nightShade, new FrameLayout.LayoutParams(-1, -1));
 
-        glow = new View(this);
-        root.addView(glow, new FrameLayout.LayoutParams(-1, -1));
-        setGlow(glowColor);
 
         scroll = new HomeScrollView(this);
         scroll.setVerticalScrollBarEnabled(false);
@@ -276,7 +270,7 @@ public class MainActivity extends Activity {
 
         LinearLayout left = new LinearLayout(this);
         left.setOrientation(LinearLayout.VERTICAL);
-        greeting = text(10, "sans-serif-medium", 0xB3FFFFFF);
+        greeting = text(12, "sans-serif-medium", 0xE6FFFFFF);
         greeting.setLetterSpacing(0.25f);
         greeting.setSingleLine(true);
         greeting.setPadding(0, 0, dp(16), 0);
@@ -284,61 +278,65 @@ public class MainActivity extends Activity {
 
         LinearLayout clockRow = new LinearLayout(this);
         clockRow.setGravity(Gravity.BOTTOM);
-        clock = text(54, "sans-serif-thin", Color.WHITE);
+        clock = text(62, "sans-serif", Color.WHITE);
         clock.setIncludeFontPadding(false);
         clockRow.addView(clock);
         ampm = text(12, "sans-serif-light", 0xCCFFFFFF);
         clockRow.addView(ampm, llp(-2, -2, dp(6), 0, 0, dp(8)));
         left.addView(clockRow, llp(-2, -2, 0, dp(2), 0, dp(2)));
 
-        date = text(10, "sans-serif-medium", 0x99FFFFFF);
+        date = text(13, "sans-serif-medium", 0xE6FFFFFF);
         date.setSingleLine(true);
         date.setPadding(0, 0, dp(16), 0); // letterSpacing is not counted in the measured width
         date.setLetterSpacing(0.22f);
         left.addView(date);
 
-        // Weather · RAM · display mode, one quiet line under the date.
-        stats = text(11, "sans-serif", 0xB3FFFFFF);
+        // Weather · RAM, one line under the date (the display mode is in the settings panel).
+        stats = text(14, "sans-serif", 0xF2FFFFFF);
         stats.setSingleLine(true);
-        left.addView(stats, llp(-2, -2, 0, dp(10), 0, 0));
-        for (TextView t : new TextView[]{greeting, clock, ampm, date, stats}) t.setShadowLayer(dp(10), 0, dp(1), 0xB3000000);
-        header.addView(left, new FrameLayout.LayoutParams(dp(520), -2, Gravity.START | Gravity.TOP));
+        left.addView(stats, llp(-2, -2, 0, dp(16), 0, 0));
+        // No shadow on the stats line: on Fire OS it draws as a grey box behind the text.
+        for (TextView t : new TextView[]{greeting, clock, ampm, date}) t.setShadowLayer(dp(10), 0, dp(1), 0xB3000000);
+        header.addView(left, new FrameLayout.LayoutParams(dp(600), -2, Gravity.START | Gravity.TOP));
 
         LinearLayout right = new LinearLayout(this);
         right.setGravity(Gravity.CENTER_VERTICAL);
         right.setClipChildren(false);
-        wifiPill = pill("Wi-Fi", "◉");
-        wifiPill.setOnClickListener(v -> launch(new Intent(Settings.ACTION_WIFI_SETTINGS)));
-        TextView settings = pill("Réglages", "⚙");
+        View wifi = iconButton(R.drawable.ic_wifi);
+        wifi.setOnClickListener(v -> launch(new Intent(Settings.ACTION_WIFI_SETTINGS)));
+        View photo = iconButton(R.drawable.ic_image);
+        photo.setOnClickListener(v -> nextWallpaper());
+        View settings = iconButton(R.drawable.ic_settings);
         settings.setOnClickListener(v -> showPanel());
-        for (TextView p : new TextView[]{wifiPill, settings}) {
-            right.addView(p, llp(-2, dp(30), dp(10), 0, 0, 0));
+        for (View p : new View[]{wifi, photo, settings}) {
+            right.addView(p, llp(dp(34), dp(34), dp(12), 0, 0, 0));
             pills.add(p);
         }
         header.addView(right, new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.TOP));
         return header;
     }
 
-    private TextView pill(String label, String glyph) {
-        TextView p = text(11, "sans-serif-medium", 0xE6FFFFFF);
-        p.setText(glyph + "  " + label);
-        p.setGravity(Gravity.CENTER);
-        p.setPadding(dp(14), 0, dp(14), 0);
-        p.setFocusable(true);
-        p.setId(View.generateViewId());
+    /** Round frosted button with a white icon; turns white with a dark icon when focused. */
+    private View iconButton(int icon) {
+        ImageView b = new ImageView(this);
+        b.setImageResource(icon);
+        b.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        b.setPadding(dp(8), dp(8), dp(8), dp(8));
+        b.setFocusable(true);
+        b.setId(View.generateViewId());
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(15));
+        bg.setShape(GradientDrawable.OVAL);
         bg.setColor(0x66000000);
-        bg.setStroke(dp(1), 0x33FFFFFF);
-        p.setBackground(bg);
-        p.setOnFocusChangeListener((v, has) -> {
+        bg.setStroke(dp(1), 0x40FFFFFF);
+        b.setBackground(bg);
+        b.setOnFocusChangeListener((v, has) -> {
             bg.setColor(has ? 0xF2FFFFFF : 0x66000000);
-            ((TextView) v).setTextColor(has ? 0xFF111111 : 0xE6FFFFFF);
-            v.animate().scaleX(has ? 1.08f : 1f).scaleY(has ? 1.08f : 1f)
+            b.setColorFilter(has ? 0xFF111111 : 0xFFFFFFFF);
+            v.animate().scaleX(has ? 1.12f : 1f).scaleY(has ? 1.12f : 1f)
                     .setInterpolator(new OvershootInterpolator(2f)).setDuration(220).start();
-            if (has) { lastFocusedId = v.getId(); scroll.smoothScrollTo(0, 0); fadeGlow(1f); }
+            if (has) { lastFocusedId = v.getId(); scroll.smoothScrollTo(0, 0); shadeGrid(false); }
         });
-        return p;
+        return b;
     }
 
     // ---------------------------------------------------------------- apps
@@ -409,7 +407,7 @@ public class MainActivity extends Activity {
         appsLabel.setVisibility(rest.isEmpty() ? View.GONE : View.VISIBLE);
         wireFocus();
 
-        if (!dock.isEmpty()) { title.setText(dock.get(0).label); setGlow(dock.get(0).color); }
+        if (!dock.isEmpty()) title.setText(dock.get(0).label);
         View last = prevPill;
         if (prevPkg != null) for (View c : concat(dockCards, gridCards)) {
             if (prevPkg.equals(((App) c.getTag()).pkg)) last = c;
@@ -493,11 +491,10 @@ public class MainActivity extends Activity {
             if (inDock) {
                 title.setText(app.label);
                 title.animate().alpha(1f).setDuration(200).start();
-                animateGlow(app.color);
-                fadeGlow(1f);
+                shadeGrid(false);
                 scroll.smoothScrollTo(0, 0);
             } else {
-                fadeGlow(0.35f);
+                shadeGrid(true);
                 title.animate().alpha(0f).setDuration(200).start();
                 scrollToRow(box);
             }
@@ -652,16 +649,13 @@ public class MainActivity extends Activity {
     private void updateClock() {
         Calendar now = Calendar.getInstance();
         int h = now.get(Calendar.HOUR_OF_DAY);
-        greeting.setText(h >= 5 && h < 18 ? "BONJOUR" : "BONSOIR");
+        greeting.setText(h >= 5 && h < 12 ? "BONJOUR" : h >= 12 && h < 18 ? "BON APRÈS-MIDI" : "BONSOIR");
         boolean is24 = android.text.format.DateFormat.is24HourFormat(this);
         clock.setText(new SimpleDateFormat(is24 ? "H:mm" : "h:mm", Locale.getDefault()).format(now.getTime()));
         ampm.setText(is24 ? "" : (h < 12 ? "AM" : "PM"));
         date.setText(new SimpleDateFormat("EEEE d MMMM", Locale.FRANCE).format(now.getTime()).toUpperCase(Locale.getDefault()));
     }
 
-    private void updateWifi() {
-        wifiPill.setText("◉  " + wifiName());
-    }
 
     /** Runs every minute while home is showing; the weather fetch only fires every 30 minutes. */
     private void updateStats() {
@@ -671,7 +665,7 @@ public class MainActivity extends Activity {
         float gb = 1024f * 1024f * 1024f;
         String ram = String.format(Locale.FRANCE, "RAM %.1f / %.1f Go", (mi.totalMem - mi.availMem) / gb, mi.totalMem / gb);
         String weather = Weather.cached(this);
-        stats.setText((weather != null ? weather + "   ·   " : "") + ram + "   ·   " + displayMode());
+        stats.setText((weather != null ? weather + "   ·   " : "") + ram);
         Weather.refreshIfStale(this, w -> updateStats());
     }
 
@@ -688,30 +682,9 @@ public class MainActivity extends Activity {
         return name;
     }
 
-    // ---------------------------------------------------------------- glow
-
-    private void setGlow(int color) {
-        glowColor = color;
-        GradientDrawable g = new GradientDrawable();
-        g.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        g.setGradientCenter(0.5f, 0.78f);
-        g.setGradientRadius(getResources().getDisplayMetrics().widthPixels * 0.62f);
-        g.setColors(new int[]{withAlpha(color, 0.5f), withAlpha(color, 0.14f), Color.TRANSPARENT});
-        glow.setBackground(g);
-    }
-
-    private void animateGlow(int to) {
-        if (glowAnim != null) glowAnim.cancel();
-        glowAnim = ValueAnimator.ofObject(new ArgbEvaluator(), glowColor, to);
-        glowAnim.setDuration(450);
-        glowAnim.addUpdateListener(a -> setGlow((int) a.getAnimatedValue()));
-        glowAnim.start();
-    }
-
-    private void fadeGlow(float alpha) {
-        glow.animate().alpha(alpha).setDuration(300).start();
-        // The grid sits over the photo's busiest middle part, so dim it while browsing apps.
-        gridShade.animate().alpha(alpha < 1f ? 1f : 0f).setDuration(300).start();
+    /** The grid sits over the photo's busiest middle part, so dim the photo while browsing apps. */
+    private void shadeGrid(boolean on) {
+        gridShade.animate().alpha(on ? 1f : 0f).setDuration(300).start();
     }
 
     // ---------------------------------------------------------------- wallpaper
@@ -722,7 +695,10 @@ public class MainActivity extends Activity {
         return v;
     }
 
-    /** Decode the next photo of the current period off the main thread, then crossfade it in. */
+    /**
+     * Decode the next photo of the current period off the main thread, then crossfade it in. A
+     * newer call wins if two decodes finish out of order (the photo button can be pressed quickly).
+     */
     private void nextWallpaper() {
         handler.removeCallbacks(rotateWallpaper);
         shownPeriod = Wallpapers.period(this);
@@ -730,9 +706,10 @@ public class MainActivity extends Activity {
         if (name == null) return;
         wallIndex = 0;
         wallChangedAt = SystemClock.elapsedRealtime();
+        int seq = ++wallSeq;
         new Thread(() -> {
             Bitmap result = Wallpapers.decode(this, name);
-            runOnUiThread(() -> showWallpaper(result));
+            runOnUiThread(() -> { if (seq == wallSeq) showWallpaper(result); });
         }).start();
         scheduleWallpaper(WALLPAPER_INTERVAL_MS);
     }
@@ -768,7 +745,7 @@ public class MainActivity extends Activity {
         handler.postDelayed(rotateWallpaper, Math.max(1000, delay));
     }
 
-    /** Average the banner's vivid pixels, then push saturation so the glow reads as a colour. */
+    /** Average the banner's vivid pixels, then push saturation: the backdrop of icon-only tiles. */
     private int sampleColor(String pkg, Drawable d) {
         Integer cached = colorCache.get(pkg);
         if (cached != null) return cached;

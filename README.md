@@ -8,9 +8,9 @@ une commande et entièrement réversible.
 
 ## Ce que ça fait
 
-- **Un écran d'accueil à la place de celui d'Amazon** : horloge, météo, RAM et mode d'affichage, un
-  dock de tes applis préférées avec une lueur de la couleur de l'appli sélectionnée, toutes les
-  autres applis en grille, et 12 photos de nature qui changent toutes les 10 minutes : des photos
+- **Un écran d'accueil à la place de celui d'Amazon** : horloge, météo et RAM, trois boutons ronds
+  (Wi-Fi, fond d'écran suivant, réglages), un dock de tes applis préférées, toutes les autres
+  applis en grille, et 12 photos de nature qui changent toutes les 10 minutes : des photos
   lumineuses le jour, des ambiances de soirée à partir de 18 h, assombries la nuit. Zéro pub, zéro
   recommandation. Environ 70 Mo de RAM, contre 100 à 140 Mo pour l'accueil Amazon.
 - **Le bouton Home ramène sur cet accueil**, en environ 20 ms, y compris au démarrage et depuis
@@ -28,8 +28,13 @@ une commande et entièrement réversible.
 
 | | |
 |---|---|
-| ![Lueur Netflix](docs/screenshots/accueil-netflix.jpg) | ![Toutes les applis](docs/screenshots/grille.jpg) |
-| ![Panneau Réglages](docs/screenshots/panneau.jpg) | ![Lueur Twitch](docs/screenshots/accueil-twitch.jpg) |
+| ![Netflix sélectionné](docs/screenshots/accueil-netflix.jpg) | ![Toutes les applis](docs/screenshots/grille.jpg) |
+| ![Panneau Réglages](docs/screenshots/panneau.jpg) | ![Twitch sélectionné](docs/screenshots/accueil-twitch.jpg) |
+
+> **Envie de plus de personnalisation ?** La branche
+> [`Personal-Config`](https://github.com/lorisknodt/firetv-home/tree/Personal-Config) ajoute des fonds
+> d'écran propres à chaque appli (tes images à toi) et un sélecteur avec aperçus. Cette version-ci
+> reste la plus légère.
 
 ## Installation
 
@@ -182,6 +187,7 @@ absent est simplement ignoré.
   Fire OS.
 - Fonds d'écran : Wikimedia Commons, licences CC, voir
   [`launcher/WALLPAPER-CREDITS.md`](launcher/WALLPAPER-CREDITS.md).
+- Icônes : [Material Icons](https://fonts.google.com/icons) de Google (Apache 2.0).
 - Météo : [Open-Meteo](https://open-meteo.com). DNS : [AdGuard DNS](https://adguard-dns.io).
 
 Licence MIT, voir [LICENSE](LICENSE).
