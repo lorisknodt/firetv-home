@@ -41,10 +41,14 @@ connect() {
 # Runs a shell command on the TV, without the carriage returns adb adds on Windows.
 sh_() { "$ADB" -s "$D" shell "$@" | tr -d '\r'; }
 
+# Package names in a debloat list, without comments (whole-line or after a name) and blank lines.
+# Packages Fire OS protects stay commented out in the lists, so check.sh never counts them as undone.
+list_packages() { sed -e 's/#.*//' -e 's/[[:space:]]//g' "$1" | tr -d '\r' | grep -v '^$'; }
+
 # Applies "disable" or "enable" to every package in a debloat list; Fire OS refuses a few.
 apply_list() {
   local action=$1 list=$2 p out
-  for p in $(grep -vE '^\s*(#|$)' "$list" | tr -d '\r'); do
+  for p in $(list_packages "$list"); do
     if [ "$action" = disable ]; then out=$(sh_ pm disable-user --user 0 "$p" 2>&1 || true)
     else out=$(sh_ pm enable --user 0 "$p" 2>&1 || true); fi
     case "$out" in

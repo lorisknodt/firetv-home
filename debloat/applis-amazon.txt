@@ -1,14 +1,31 @@
-# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): Amazon extras not used here.
-# Disabled with `pm disable-user`, never uninstalled.
-# Applied by setup.sh, undone by uninstall.sh.
+# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): Amazon extras.
+# Disabled with `pm disable-user`, never uninstalled. Applied by setup.sh, undone by uninstall.sh.
+# Keep this whole list with: ./setup.sh <ip> --keep applis-amazon (or comment out single lines).
 
 # Shopping, miniTV, games, photos, music
 com.amazon.shoptv.client
 com.amazon.shoptv.firetv.client
 com.amazon.minitv.android.app
-com.amazon.gamehub
+com.amazon.gamehub                         # Amazon Luna / Game Hub
 com.amazon.bueller.photos
 com.amazon.bueller.music
+
+# Live tab and Fire TV channels (no tuner on a stick; IPTV and Pluto-style apps still work)
+com.amazon.tv.livetv
+com.amazon.franktvinput
+com.amazon.hedwig
+
+# Silk browser and Amazon Kids
+com.amazon.cloud9                          # Silk
+com.amazon.tv.website_launcher             # opens websites in Silk
+com.amazon.tahoe                           # Amazon Kids
+
+# Tutorials and setup helpers for other Amazon devices
+com.amazon.tmm.tutorial
+com.amazon.storm.lightning.tutorial
+com.amazon.whisperjoin.middleware.v2.np
+com.amazon.tv.ffsprovisioneeclient
+com.amazon.ods.kindleconnect
 
 # Ambient mode ("Écran dynamique"); the basic screensaver stays
 com.amazon.tv.ftvambient

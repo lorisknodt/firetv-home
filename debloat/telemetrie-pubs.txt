@@ -1,16 +1,35 @@
-# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): telemetry and ads.
+# Fire TV Stick 4K Max (AFTKRT, Fire OS 8.1.8.5): telemetry, data collection and ads.
 # Disabled with `pm disable-user`, never uninstalled. Applied by setup.sh, undone by uninstall.sh.
+# Completed from cleanyourtv's Fire OS 8.1.8.5 list (github.com/Gathin23/cleanyourtv, MIT), tested here.
+# Never add com.amazon.imp: with several of these disabled it leaves the Amazon home black.
 
-# Telemetry and metrics
+# Telemetry, metrics, logs, usage and location reporting
 com.amazon.device.telemetry.emitter
 com.amazon.client.metrics.api
-com.amazon.device.metrics
 com.amazon.perfcollection
+com.amazon.perfc
 com.amazon.wirelessmetrics.service
+com.amazon.neo.minerva
+com.amazon.neo.minerva.logcat
+com.amazon.dp.logger
+com.amazon.ceviche                         # data collection pipelines
+com.amazon.tv.developer.dataservice        # content personalisation data for third-party apps
+com.amazon.livedeviceservice
+com.amazon.privacypassservice
+com.amazon.wifilocker                      # uploads Wi-Fi passwords to Amazon
+com.amazon.ftvspatial                      # presence and indoor-location sensing
+com.amazon.tv.acr                          # Automatic Content Recognition
+# com.amazon.device.metrics                # protected by Fire OS ("Cannot disable a protected package")
 
-# Ads and recommendations
-com.amazon.tv.acr
-com.amazon.ftvads.deeplinking
-com.amazon.hybridadidservice
-com.amazon.sneakpeek
+# Ads, sponsored rows, recommendations, promos
+com.amazon.kso.blackbird                   # ad sync and bidding for the Amazon home
+com.amazon.hybridadidservice               # advertising ID
+com.amazon.sneakpeek                       # sponsored previews
 com.amazon.media.recommendations
+com.amazon.providers.contentsupport
+com.amazon.tv.easyupgrade                  # "upgrade your Fire TV" promos
+com.amazon.systemnotices
+com.amazon.tv.releasenotes
+com.amazon.uxnotification                  # notification popups
+com.amazon.tv.earlyaccess
+# com.amazon.ftvads.deeplinking            # protected by Fire OS
